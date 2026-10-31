@@ -32,7 +32,7 @@ public partial class MainWindow : Window
 
     private static string FindProjectDirectory()
     {
-        foreach (var startPath in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
+        foreach (var startPath in new[] { AppContext.BaseDirectory, Environment.CurrentDirectory })
         {
             var directory = new DirectoryInfo(startPath);
             while (directory is not null)
