@@ -19,7 +19,6 @@ public partial class MainWindow : Window
         RegexOptions.Compiled);
 
     private readonly ObservableCollection<Note> _notes = [];
-    private Note? _selectedNote;
     private bool _updatingSelection;
 
     public MainWindow()
@@ -142,10 +141,7 @@ public partial class MainWindow : Window
             Content = content.TrimEnd('\r', '\n'),
             SavedAt = DateTimeOffset.Now
         };
-        var updatedNotes = _notes
-            .Where(existing => !ReferenceEquals(existing, _selectedNote))
-            .Prepend(note)
-            .ToList();
+        var updatedNotes = _notes.Prepend(note).ToList();
 
         try
         {
@@ -156,12 +152,13 @@ public partial class MainWindow : Window
             _notes.Clear();
             foreach (var savedNote in updatedNotes)
                 _notes.Add(savedNote);
-            _selectedNote = note;
             _updatingSelection = true;
-            NotesList.SelectedItem = note;
+            NotesList.SelectedItem = null;
             _updatingSelection = false;
+            TitleInput.Clear();
+            ContentInput.Clear();
             UpdateNoteCount();
-            ShowStatus("Notatka została zapisana.");
+            ShowStatus("Notatka została zapisana. Możesz dodać kolejną.");
         }
         catch (IOException)
         {
@@ -189,7 +186,6 @@ public partial class MainWindow : Window
         _updatingSelection = true;
         NotesList.SelectedItem = null;
         _updatingSelection = false;
-        _selectedNote = null;
         TitleInput.Clear();
         ContentInput.Clear();
         ShowStatus("Utwórz nową notatkę.");
@@ -201,7 +197,6 @@ public partial class MainWindow : Window
         if (_updatingSelection || NotesList.SelectedItem is not Note note)
             return;
 
-        _selectedNote = note;
         TitleInput.Text = note.Title;
         ContentInput.Text = note.Content;
         ShowStatus($"Otwarto notatkę „{note.Title}”.");
