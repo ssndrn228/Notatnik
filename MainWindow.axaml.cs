@@ -1,9 +1,11 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
+using System.Text;
+using System.Text.RegularExpressions;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -11,11 +13,10 @@ namespace notatnik;
 
 public partial class MainWindow : Window
 {
-    private static readonly string NotesDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Notatnik");
-    private static readonly string NotesFilePath = Path.Combine(NotesDirectory, "notatki.json");
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly string NotesFilePath = Path.Combine(FindProjectDirectory(), "notatki.md");
+    private static readonly Regex NoteHeading = new(
+        @"^## (?<date>\d{4}-\d{2}-\d{2} \d{2}:\d{2}) — (?<title>.*)$",
+        RegexOptions.Compiled);
 
     private readonly ObservableCollection<Note> _notes = [];
     private Note? _selectedNote;
@@ -29,6 +30,23 @@ public partial class MainWindow : Window
         UpdateNoteCount();
     }
 
+    private static string FindProjectDirectory()
+    {
+        foreach (var startPath in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
+        {
+            var directory = new DirectoryInfo(startPath);
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "notatnik.csproj")))
+                    return directory.FullName;
+
+                directory = directory.Parent;
+            }
+        }
+
+        return Environment.CurrentDirectory;
+    }
+
     private void LoadNotes()
     {
         if (!File.Exists(NotesFilePath))
@@ -36,34 +54,73 @@ public partial class MainWindow : Window
 
         try
         {
-            var notes = JsonSerializer.Deserialize<List<Note>>(File.ReadAllText(NotesFilePath));
-            if (notes is not null)
-            {
-                foreach (var note in notes.OrderByDescending(note => note.SavedAt))
-                    _notes.Add(note);
-            }
-        }
-        catch (JsonException)
-        {
-            StatusText.Text = "Plik z notatkami ma nieprawidłowy format. Zapisz notatkę, aby go zastąpić.";
-            StatusText.Foreground = Avalonia.Media.Brushes.DarkOrange;
+            var fileContents = File.ReadAllText(NotesFilePath, Encoding.UTF8);
+            foreach (var note in ParseNotes(fileContents))
+                _notes.Add(note);
         }
         catch (IOException)
         {
-            StatusText.Text = "Nie udało się odczytać pliku z notatkami.";
-            StatusText.Foreground = Avalonia.Media.Brushes.DarkOrange;
+            ShowStatus("Nie udało się odczytać pliku notatki.md.", isError: true);
         }
         catch (UnauthorizedAccessException)
         {
-            StatusText.Text = "Brak uprawnień do odczytu pliku z notatkami.";
-            StatusText.Foreground = Avalonia.Media.Brushes.DarkOrange;
+            ShowStatus("Brak uprawnień do odczytu pliku notatki.md.", isError: true);
         }
+    }
+
+    private static IEnumerable<Note> ParseNotes(string fileContents)
+    {
+        using var reader = new StringReader(fileContents);
+        var notes = new List<Note>();
+        Note? currentNote = null;
+        var contentLines = new List<string>();
+        string? line;
+
+        while ((line = reader.ReadLine()) is not null)
+        {
+            var match = NoteHeading.Match(line);
+            if (match.Success &&
+                DateTime.TryParseExact(
+                    match.Groups["date"].Value,
+                    "yyyy-MM-dd HH:mm",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeLocal,
+                    out var savedAt))
+            {
+                if (currentNote is not null)
+                {
+                    if (contentLines.Count > 0 && contentLines[^1].Length == 0)
+                        contentLines.RemoveAt(contentLines.Count - 1);
+                    currentNote.Content = string.Join(Environment.NewLine, contentLines);
+                    notes.Add(currentNote);
+                }
+
+                currentNote = new Note
+                {
+                    Title = match.Groups["title"].Value,
+                    SavedAt = new DateTimeOffset(savedAt)
+                };
+                contentLines.Clear();
+            }
+            else if (currentNote is not null)
+            {
+                contentLines.Add(line);
+            }
+        }
+
+        if (currentNote is not null)
+        {
+            currentNote.Content = string.Join(Environment.NewLine, contentLines);
+            notes.Add(currentNote);
+        }
+
+        return notes;
     }
 
     private void SaveNote_Click(object? sender, RoutedEventArgs e)
     {
         var title = TitleInput.Text?.Trim();
-        var content = ContentInput.Text?.Trim();
+        var content = ContentInput.Text;
         if (string.IsNullOrWhiteSpace(title))
         {
             ShowStatus("Wpisz tytuł notatki.", isError: true);
@@ -78,10 +135,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        title = title.Replace("\r", " ").Replace("\n", " ");
         var note = new Note
         {
             Title = title,
-            Content = content,
+            Content = content.TrimEnd('\r', '\n'),
             SavedAt = DateTimeOffset.Now
         };
         var updatedNotes = _notes
@@ -91,9 +149,8 @@ public partial class MainWindow : Window
 
         try
         {
-            Directory.CreateDirectory(NotesDirectory);
             var temporaryPath = NotesFilePath + ".tmp";
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(updatedNotes, JsonOptions));
+            File.WriteAllText(temporaryPath, FormatNotes(updatedNotes), new UTF8Encoding(false));
             File.Move(temporaryPath, NotesFilePath, overwrite: true);
 
             _notes.Clear();
@@ -108,12 +165,23 @@ public partial class MainWindow : Window
         }
         catch (IOException)
         {
-            ShowStatus("Nie udało się zapisać notatki. Sprawdź dostęp do dysku.", isError: true);
+            ShowStatus("Nie udało się zapisać notatki.md. Sprawdź dostęp do pliku.", isError: true);
         }
         catch (UnauthorizedAccessException)
         {
-            ShowStatus("Brak uprawnień do zapisu pliku z notatkami.", isError: true);
+            ShowStatus("Brak uprawnień do zapisu pliku notatki.md.", isError: true);
         }
+    }
+
+    private static string FormatNotes(IEnumerable<Note> notes)
+    {
+        var entries = notes.Select(note =>
+        {
+            var heading = $"## {note.SavedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} — {note.Title}";
+            return $"{heading}{Environment.NewLine}{note.Content}";
+        });
+        var contents = string.Join($"{Environment.NewLine}{Environment.NewLine}", entries);
+        return contents.Length == 0 ? string.Empty : contents + Environment.NewLine;
     }
 
     private void NewNote_Click(object? sender, RoutedEventArgs e)
@@ -141,7 +209,7 @@ public partial class MainWindow : Window
 
     private void UpdateNoteCount()
     {
-        NoteCountText.Text = _notes.Count.ToString();
+        NoteCountText.Text = _notes.Count.ToString(CultureInfo.InvariantCulture);
     }
 
     private void ShowStatus(string message, bool isError = false)
