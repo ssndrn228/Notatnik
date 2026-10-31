@@ -144,12 +144,14 @@ public partial class MainWindow : Window
         var updatedNotes = _notes.Prepend(note).ToList();
 
         try
-        {
-            var temporaryPath = NotesFilePath + ".tmp";
-            File.WriteAllText(temporaryPath, FormatNotes(updatedNotes), new UTF8Encoding(false));
-            File.Move(temporaryPath, NotesFilePath, overwrite: true);
+{
+    var temporaryPath = NotesFilePath + ".tmp";
 
-            _notes.Clear();
+    File.WriteAllText(temporaryPath, FormatNotes(updatedNotes), new UTF8Encoding(false));
+
+    File.Move(temporaryPath, NotesFilePath, overwrite: true);
+
+    _notes.Clear();
             foreach (var savedNote in updatedNotes)
                 _notes.Add(savedNote);
             _updatingSelection = true;
@@ -158,16 +160,12 @@ public partial class MainWindow : Window
             TitleInput.Clear();
             ContentInput.Clear();
             UpdateNoteCount();
-            ShowStatus("Notatka została zapisana. Możesz dodać kolejną.");
+            StatusText.Text = "Zapisano";
         }
-        catch (IOException)
-        {
-            ShowStatus("Nie udało się zapisać notatki.md. Sprawdź dostęp do pliku.", isError: true);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            ShowStatus("Brak uprawnień do zapisu pliku notatki.md.", isError: true);
-        }
+        catch (Exception ex)
+{
+    StatusText.Text = $"Nie udało się zapisać: {ex.Message}";
+}
     }
 
     private static string FormatNotes(IEnumerable<Note> notes)
