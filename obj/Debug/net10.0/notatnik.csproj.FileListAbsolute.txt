@@ -83,7 +83,6 @@ C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\notatnik.GeneratedMSBuildE
 C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\notatnik.AssemblyInfoInputs.cache
 C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\notatnik.AssemblyInfo.cs
 C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\notatnik.csproj.CoreCompileInputs.cache
-C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\notatnik.sourcelink.json
 C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\notatnik.csproj.Up2Date
 C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\notatnik.dll
 C:\Users\kapli\drugie-okno\notatnik\obj\Debug\net10.0\refint\notatnik.dll

@@ -1,9 +1,100 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:notatnik"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="notatnik.MainWindow"
-        Title="notatnik">
-    Welcome to Avalonia!
+        Title="Notatnik"
+        Width="1000" Height="700"
+        MinWidth="760" MinHeight="560"
+        Background="#F4F6F9">
+    <Window.Styles>
+        <Style Selector="TextBox">
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderBrush" Value="#DCE2EA" />
+            <Setter Property="Background" Value="White" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*" Margin="28">
+        <StackPanel Spacing="4" Margin="0,0,0,24">
+            <TextBlock Text="Mój notatnik" FontSize="28" FontWeight="Bold" Foreground="#172033" />
+            <TextBlock Text="Zapisuj pomysły i wracaj do nich, kiedy tylko chcesz."
+                       FontSize="14" Foreground="#697586" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnDefinitions="3*,2*" ColumnSpacing="20">
+            <Border Background="White" CornerRadius="14" Padding="24"
+                    BorderBrush="#E6EAF0" BorderThickness="1">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="12">
+                    <TextBlock Text="Tytuł" FontWeight="SemiBold" Foreground="#344054" />
+                    <TextBox x:Name="TitleInput" Grid.Row="1"
+                             PlaceholderText="Wpisz tytuł notatki" FontSize="15" />
+                    <TextBlock Grid.Row="2" Text="Treść" FontWeight="SemiBold" Foreground="#344054" />
+                    <TextBox x:Name="ContentInput" Grid.Row="3"
+                             PlaceholderText="Zacznij pisać..." FontSize="14"
+                             AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalContentAlignment="Top"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <TextBlock x:Name="StatusText" Grid.Row="4" MinHeight="20"
+                               FontSize="12" Foreground="#667085" TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="10">
+                        <Button Content="Zapisz notatkę" Click="SaveNote_Click"
+                                Background="#375DFB" Foreground="White" />
+                        <Button Content="Nowa notatka" Click="NewNote_Click"
+                                Background="#EEF2FF" Foreground="#3448A5" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" CornerRadius="14" Padding="22"
+                    BorderBrush="#E6EAF0" BorderThickness="1">
+                <Grid RowDefinitions="Auto,*">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+                        <TextBlock Text="Zapisane notatki" FontSize="18" FontWeight="Bold"
+                                   Foreground="#172033" />
+                        <Border Background="#EEF2FF" CornerRadius="10" Padding="8,2"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="NoteCountText" Text="0" FontSize="12"
+                                       FontWeight="SemiBold" Foreground="#375DFB" />
+                        </Border>
+                    </StackPanel>
+                    <ListBox x:Name="NotesList" Grid.Row="1"
+                             SelectionChanged="NotesList_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="local:Note">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                               FontSize="14" Foreground="#172033"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Preview}" FontSize="12"
+                                               Foreground="#697586" TextWrapping="Wrap"
+                                               MaxHeight="36" />
+                                    <TextBlock Text="{Binding SavedAtLabel}" FontSize="11"
+                                               Foreground="#98A2B3" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 </Window>
